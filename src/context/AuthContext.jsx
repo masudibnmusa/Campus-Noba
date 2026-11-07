@@ -13,11 +13,19 @@ export function AuthProvider({ children }) {
     else localStorage.removeItem(SESSION_KEY)
   }, [userId])
 
-  const currentUser = db.users.find(u => u.id === userId) || null
+  // A suspended account loses its session immediately
+  const sessionUser = db.users.find(u => u.id === userId)
+  const currentUser = sessionUser && !sessionUser.suspended ? sessionUser : null
 
   function login(email, password) {
     const user = db.users.find(u => u.email.toLowerCase() === email.toLowerCase() && u.password === password)
     if (!user) return { ok: false, error: 'Incorrect email or password.' }
+    if (user.suspended) {
+      return { ok: false, error: 'This account has been suspended. Please contact the System Administrator.' }
+    }
+    if (user.role === 'partner' && user.approveStatus === 'rejected') {
+      return { ok: false, error: 'Your corporate account was not approved by the University Admin.' }
+    }
     if (user.role === 'partner' && user.approveStatus !== 'approved') {
       return { ok: false, error: 'Your corporate account is still pending University Admin verification.' }
     }

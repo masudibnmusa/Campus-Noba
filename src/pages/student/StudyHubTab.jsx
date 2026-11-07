@@ -6,18 +6,29 @@ import { COURSES } from '../../data/seed.js'
 import { SectionTitle, EmptyState, Badge, Modal } from '../../components/UI.jsx'
 
 export default function StudyHubTab() {
-  const { db, addItem, patchItem } = useData()
+  const { db, addItem, update } = useData()
   const { currentUser } = useAuth()
   const [query, setQuery] = useState('')
   const [showUpload, setShowUpload] = useState(false)
   const [form, setForm] = useState({ title: '', courseCode: COURSES[0].code, fileType: 'PDF' })
 
-  const filtered = db.resources.filter(r =>
+  // Rejected files are only visible to the student who uploaded them
+  const filtered = db.resources.filter(r => r.status !== 'rejected' || r.uploaderId === currentUser.id).filter(r =>
     r.title.toLowerCase().includes(query.toLowerCase()) || r.courseCode.toLowerCase().includes(query.toLowerCase())
   )
 
-  function upvote(id) {
-    patchItem('resources', id, { upvotes: (db.resources.find(r => r.id === id)?.upvotes || 0) + 1 })
+  // One upvote per student; clicking again removes it
+  function toggleUpvote(id) {
+    update('resources', list => list.map(r => {
+      if (r.id !== id || r.uploaderId === currentUser.id) return r
+      const upvotedBy = r.upvotedBy || []
+      const has = upvotedBy.includes(currentUser.id)
+      return {
+        ...r,
+        upvotedBy: has ? upvotedBy.filter(u => u !== currentUser.id) : [...upvotedBy, currentUser.id],
+        upvotes: Math.max(0, (r.upvotes || 0) + (has ? -1 : 1)),
+      }
+    }))
   }
 
   function submitUpload(e) {
@@ -55,15 +66,17 @@ export default function StudyHubTab() {
                 <div className="flex items-center gap-2 flex-wrap">
                   <Badge tone="purple">{r.courseCode}</Badge>
                   <span className="text-xs text-slate-400">{r.fileType} • {r.sizeLabel}</span>
-                  {r.status === 'approved'
-                    ? <Badge tone="green">{r.badge || 'Professor Verified'}</Badge>
-                    : <Badge tone="amber">Pending Vetting</Badge>}
+                  {r.status === 'approved' && <Badge tone="green">{r.badge || 'Professor Verified'}</Badge>}
+                  {r.status === 'pending' && <Badge tone="amber">Pending Vetting</Badge>}
+                  {r.status === 'rejected' && <Badge tone="red">Rejected — only you can see this</Badge>}
                 </div>
                 <p className="font-semibold text-slate-800 mt-1.5">{r.title}</p>
                 <p className="text-xs text-slate-400 mt-1">By {uploader?.name} • Uploaded {r.uploadedAt}</p>
               </div>
               <div className="flex flex-col items-end gap-2 shrink-0">
-                <button onClick={() => upvote(r.id)} className="flex items-center gap-1 text-xs font-semibold text-slate-500 hover:text-nova-600">
+                <button onClick={() => toggleUpvote(r.id)} disabled={r.uploaderId === currentUser.id}
+                  title={r.uploaderId === currentUser.id ? "You can't upvote your own upload" : undefined}
+                  className={`flex items-center gap-1 text-xs font-semibold disabled:cursor-not-allowed ${(r.upvotedBy || []).includes(currentUser.id) ? 'text-nova-600' : 'text-slate-500 hover:text-nova-600'}`}>
                   <ThumbsUp size={14} /> {r.upvotes}
                 </button>
                 <button disabled={r.status !== 'approved'} className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 ${r.status === 'approved' ? 'bg-nova-500 text-white hover:bg-nova-600' : 'bg-slate-100 text-slate-400'}`}>

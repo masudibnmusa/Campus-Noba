@@ -24,7 +24,7 @@ export function DataProvider({ children }) {
   }, [])
 
   const addItem = useCallback((collection, item) => {
-    update(collection, list => [{ ...item, id: item.id || `${collection.slice(0, 3).toUpperCase()}-${Date.now()}` }, ...list])
+    update(collection, list => [{ ...item, id: item.id || `${collection.slice(0, 3).toUpperCase()}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}` }, ...list])
   }, [update])
 
   const patchItem = useCallback((collection, id, patch) => {

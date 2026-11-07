@@ -13,6 +13,8 @@ export default function BazaarTab() {
   const [query, setQuery] = useState('')
   const [showPost, setShowPost] = useState(false)
   const [reportTarget, setReportTarget] = useState(null)
+  const [contactTarget, setContactTarget] = useState(null)
+  const [contactMsg, setContactMsg] = useState('')
   const [form, setForm] = useState({ title: '', price: '', category: CATEGORIES[0], condition: CONDITIONS[1] })
 
   const filtered = db.bazaarItems.filter(i => i.status === 'available' && i.title.toLowerCase().includes(query.toLowerCase()))
@@ -33,6 +35,29 @@ export default function BazaarTab() {
   function submitReport(reason) {
     addItem('reports', { targetType: 'bazaar', targetId: reportTarget.id, reason, reportedBy: currentUser.id, status: 'open', createdAt: new Date().toISOString().slice(0, 10) })
     setReportTarget(null)
+  }
+
+  function openContact(item) {
+    setContactTarget(item)
+    setContactMsg(`Hi! Is "${item.title}" still available?`)
+  }
+
+  function submitContact(e) {
+    e.preventDefault()
+    if (!contactMsg.trim()) return
+    const item = contactTarget
+    addItem('bazaarChats', {
+      itemId: item.id, buyerId: currentUser.id, sellerId: item.sellerId,
+      message: contactMsg.trim(), createdAt: new Date().toISOString().slice(0, 10),
+    })
+    addItem('notifications', {
+      userId: item.sellerId,
+      title: `Buyer interested in "${item.title}"`,
+      body: `${currentUser.name} (${currentUser.email}): ${contactMsg.trim()}`,
+      time: 'just now', read: false, icon: 'user',
+    })
+    setContactTarget(null)
+    setContactMsg('')
   }
 
   return (
@@ -66,7 +91,9 @@ export default function BazaarTab() {
                   <button onClick={() => markSold(item.id)} className="btn-secondary flex-1 text-xs py-2">Mark as Sold</button>
                 ) : (
                   <>
-                    <button className="btn-primary flex-1 text-xs py-2">Contact Seller</button>
+                    {db.bazaarChats.some(c => c.itemId === item.id && c.buyerId === currentUser.id)
+                      ? <button onClick={() => openContact(item)} className="btn-secondary flex-1 text-xs py-2">Message Sent · Send Again</button>
+                      : <button onClick={() => openContact(item)} className="btn-primary flex-1 text-xs py-2">Contact Seller</button>}
                     <button onClick={() => setReportTarget(item)} title="Report listing" className="w-9 h-9 rounded-xl border border-slate-200 flex items-center justify-center text-slate-400 hover:text-red-500 hover:border-red-200 shrink-0"><ShieldAlert size={15} /></button>
                   </>
                 )}
@@ -104,6 +131,22 @@ export default function BazaarTab() {
             <div className="flex gap-3 pt-1">
               <button type="button" onClick={() => setShowPost(false)} className="btn-secondary flex-1">Cancel</button>
               <button type="submit" className="btn-primary flex-1">Publish Trade Listing</button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {contactTarget && (
+        <Modal title="Contact Seller" onClose={() => setContactTarget(null)}>
+          <form onSubmit={submitContact} className="space-y-4">
+            <p className="text-sm text-slate-500">
+              Message {db.users.find(u => u.id === contactTarget.sellerId)?.name} about "{contactTarget.title}" (৳ {contactTarget.price} BDT).
+              They'll get a notification with your email so they can reply.
+            </p>
+            <textarea className="input min-h-[100px]" required value={contactMsg} onChange={e => setContactMsg(e.target.value)} />
+            <div className="flex gap-3">
+              <button type="button" onClick={() => setContactTarget(null)} className="btn-secondary flex-1">Cancel</button>
+              <button type="submit" className="btn-primary flex-1">Send Message</button>
             </div>
           </form>
         </Modal>

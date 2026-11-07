@@ -4,6 +4,7 @@ import { useData } from '../../context/DataContext.jsx'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { COURSES } from '../../data/seed.js'
 import { SectionTitle, EmptyState, Badge, Modal } from '../../components/UI.jsx'
+import { today } from '../../utils/date.js'
 
 export default function StudyHubTab() {
   const { db, addItem, update } = useData()
@@ -36,7 +37,7 @@ export default function StudyHubTab() {
     if (!form.title.trim()) return
     addItem('resources', {
       title: form.title, courseCode: form.courseCode, fileType: form.fileType, sizeLabel: `${(Math.random() * 4 + 0.5).toFixed(1)} MB`,
-      status: 'pending', badge: null, upvotes: 0, uploaderId: currentUser.id, uploadedAt: new Date().toISOString().slice(0, 10),
+      status: 'pending', badge: null, upvotes: 0, uploaderId: currentUser.id, uploadedAt: today(),
     })
     setShowUpload(false)
     setForm({ title: '', courseCode: COURSES[0].code, fileType: 'PDF' })
@@ -104,9 +105,9 @@ export default function StudyHubTab() {
             <div>
               <label className="label">File Type</label>
               <select className="input" value={form.fileType} onChange={e => setForm(f => ({ ...f, fileType: e.target.value }))}>
-                <option>PDF Document</option>
-                <option>DOCX Document</option>
-                <option>PPTX Slides</option>
+                <option value="PDF">PDF Document</option>
+                <option value="DOCX">DOCX Document</option>
+                <option value="PPTX">PPTX Slides</option>
               </select>
             </div>
             <div className="flex gap-3 pt-1">

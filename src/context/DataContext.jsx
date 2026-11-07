@@ -7,7 +7,15 @@ const DataContext = createContext(null)
 function loadDB() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
-    if (raw) return JSON.parse(raw)
+    if (raw) {
+      // Add any collections that were introduced after this browser first saved data
+      const saved = JSON.parse(raw)
+      const fresh = JSON.parse(JSON.stringify(SEED_DB))
+      for (const key of Object.keys(fresh)) {
+        if (!Array.isArray(saved[key])) saved[key] = fresh[key]
+      }
+      return saved
+    }
   } catch (e) { /* fall through to seed */ }
   return JSON.parse(JSON.stringify(SEED_DB))
 }

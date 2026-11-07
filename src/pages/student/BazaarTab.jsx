@@ -3,6 +3,7 @@ import { Plus, Search, Tag, ShieldAlert } from 'lucide-react'
 import { useData } from '../../context/DataContext.jsx'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { SectionTitle, EmptyState, Badge, Modal } from '../../components/UI.jsx'
+import { today } from '../../utils/date.js'
 
 const CATEGORIES = ['Textbook', 'Electronics', 'Lab Gear', 'Study Notes', 'Other']
 const CONDITIONS = ['Like New', 'Good', 'Fair']
@@ -24,7 +25,7 @@ export default function BazaarTab() {
     if (!form.title.trim() || !form.price) return
     addItem('bazaarItems', {
       title: form.title, price: Number(form.price), category: form.category, condition: form.condition,
-      sellerId: currentUser.id, status: 'available', postedAt: new Date().toISOString().slice(0, 10),
+      sellerId: currentUser.id, status: 'available', postedAt: today(),
     })
     setShowPost(false)
     setForm({ title: '', price: '', category: CATEGORIES[0], condition: CONDITIONS[1] })
@@ -32,8 +33,12 @@ export default function BazaarTab() {
 
   function markSold(id) { patchItem('bazaarItems', id, { status: 'sold' }) }
 
+  const alreadyReported = (itemId) =>
+    db.reports.some(r => r.targetType === 'bazaar' && r.targetId === itemId && r.reportedBy === currentUser.id && r.status === 'open')
+
   function submitReport(reason) {
-    addItem('reports', { targetType: 'bazaar', targetId: reportTarget.id, reason, reportedBy: currentUser.id, status: 'open', createdAt: new Date().toISOString().slice(0, 10) })
+    if (alreadyReported(reportTarget.id)) { setReportTarget(null); return }
+    addItem('reports', { targetType: 'bazaar', targetId: reportTarget.id, reason, reportedBy: currentUser.id, status: 'open', createdAt: today() })
     setReportTarget(null)
   }
 
@@ -48,7 +53,7 @@ export default function BazaarTab() {
     const item = contactTarget
     addItem('bazaarChats', {
       itemId: item.id, buyerId: currentUser.id, sellerId: item.sellerId,
-      message: contactMsg.trim(), createdAt: new Date().toISOString().slice(0, 10),
+      message: contactMsg.trim(), createdAt: today(),
     })
     addItem('notifications', {
       userId: item.sellerId,
@@ -94,7 +99,9 @@ export default function BazaarTab() {
                     {db.bazaarChats.some(c => c.itemId === item.id && c.buyerId === currentUser.id)
                       ? <button onClick={() => openContact(item)} className="btn-secondary flex-1 text-xs py-2">Message Sent · Send Again</button>
                       : <button onClick={() => openContact(item)} className="btn-primary flex-1 text-xs py-2">Contact Seller</button>}
-                    <button onClick={() => setReportTarget(item)} title="Report listing" className="w-9 h-9 rounded-xl border border-slate-200 flex items-center justify-center text-slate-400 hover:text-red-500 hover:border-red-200 shrink-0"><ShieldAlert size={15} /></button>
+                    <button onClick={() => setReportTarget(item)} disabled={alreadyReported(item.id)}
+                      title={alreadyReported(item.id) ? 'You already reported this listing' : 'Report listing'}
+                      className={`w-9 h-9 rounded-xl border flex items-center justify-center shrink-0 ${alreadyReported(item.id) ? 'border-red-200 bg-red-50 text-red-400 cursor-not-allowed' : 'border-slate-200 text-slate-400 hover:text-red-500 hover:border-red-200'}`}><ShieldAlert size={15} /></button>
                   </>
                 )}
               </div>

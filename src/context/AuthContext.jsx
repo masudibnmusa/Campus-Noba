@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { useData } from './DataContext.jsx'
+import { COURSES } from '../data/seed.js'
 
 const SESSION_KEY = 'campusnova_session_v1'
 const AuthContext = createContext(null)
@@ -52,7 +53,7 @@ export function AuthProvider({ children }) {
       email: payload.email,
       password: payload.password,
       avatarColor: '#6440c9',
-      ...(payload.role === 'student' ? { studentId: `242-35-${Math.floor(800 + Math.random() * 199)}`, dept: 'Software Engineering', batch: '43', cgpa: 3.5, skills: [] } : {}),
+      ...(payload.role === 'student' ? { studentId: `242-35-${Math.floor(800 + Math.random() * 199)}`, dept: 'Software Engineering', batch: '43', cgpa: 3.5, skills: [], courses: COURSES.map(c => c.code) } : {}),
       ...(payload.role === 'faculty' ? { facultyId: `F-${Math.floor(100 + Math.random() * 899)}`, dept: 'Software Engineering', designation: 'Lecturer' } : {}),
       ...(payload.role === 'club' ? { clubId: `C-${Math.floor(10 + Math.random() * 89)}`, leadContact: payload.name } : {}),
       ...(payload.role === 'partner' ? { partnerId: `P-${Math.floor(10 + Math.random() * 89)}`, regNum: `BD-REG-${Math.floor(1000 + Math.random() * 8999)}`, approveStatus: 'pending' } : {}),
